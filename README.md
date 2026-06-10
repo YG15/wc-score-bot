@@ -188,6 +188,12 @@ launchctl load -w ~/Library/LaunchAgents/com.wcscores.plist
 
 ---
 
+## Credits
+
+The prediction engine in this project builds on prior work by **[@NachiLieder](https://github.com/NachiLieder)**.
+
+---
+
 <details>
 <summary><b>Troubleshooting</b></summary>
 
