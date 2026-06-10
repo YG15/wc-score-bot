@@ -1,64 +1,104 @@
-# World Cup 2026 - Daily Score Predictions
+<div align="center">
+  <img src="banner.svg" alt="WC 2026 Score Bot" width="100%">
+  <br><br>
 
-A bot that every day at noon sends you the most probable scoreline for every World Cup game, powered by live Polymarket betting odds.
+  ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)
+  ![Platform](https://img.shields.io/badge/macOS-only-lightgrey?style=flat-square&logo=apple)
+  ![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen?style=flat-square)
+  ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
+  ![Data](https://img.shields.io/badge/data-Polymarket-6B3FA0?style=flat-square)
 
-**What you get:**
-- A **Telegram message** with today's and tomorrow's games + predicted scores (with country flags)
-- A **Google Sheet** with all 72 games, predicted scores, and actual results as they come in
+  <br>
+  <strong>Every day at noon: the most probable scoreline for every World Cup game, straight to your Telegram.</strong>
+</div>
 
-**How it works:**  
-The script pulls live betting odds from [Polymarket](https://polymarket.com), uses a statistical model (independent Poisson distribution) to compute the most likely scoreline, and delivers predictions to your phone and a shared Sheet. No manual input needed once set up.
+---
+
+## What you get
+
+**A Telegram message every day at noon** with today's and tomorrow's games:
+
+```
+World Cup - next 24h (2026-06-14 / 2026-06-15)
+model = Poisson on moneyline; market = Polymarket exact-score
+
+[2026-06-14] 🇺🇸 United States vs 🇵🇾 Paraguay:   model 1-0 | market 1-0
+[2026-06-14] 🇧🇷 Brazil vs 🇲🇦 Morocco:             model 1-0 | market 1-0
+[2026-06-15] 🇦🇷 Argentina vs 🇩🇿 Algeria:           model 2-0 | market 2-0
+[2026-06-15] 🇫🇷 France vs 🇸🇳 Senegal:              model 2-0
+```
+
+**A Google Sheet with all 72 games**, updated daily with predictions and actual results:
+
+| Date | Home | Away | Model | Market | xG | Actual |
+|------|------|------|-------|--------|----|--------|
+| 2026-06-11 | 🇲🇽 Mexico | 🇿🇦 South Africa | 1:0 (16%) | 1:0 (15%) | 1.89:0.57 | **2:0** |
+| 2026-06-14 | 🇺🇸 United States | 🇵🇾 Paraguay | 1:0 (16%) | 1:0 (15%) | 1.67:0.52 | |
+| 2026-06-14 | 🇧🇷 Brazil | 🇲🇦 Morocco | 1:0 (18%) | 1:0 (17%) | 1.89:0.71 | |
+
+Plus a second tab with **World Cup winner and Golden Boot odds** from the markets.
+
+---
+
+## How it works
+
+```
+Polymarket API  →  daily_scores.py  →  Telegram  (today + tomorrow)
+ (no key needed)                    →  Google Sheet  (all 72 games)
+```
+
+Predictions come from [Polymarket](https://polymarket.com) — the world's largest prediction market — processed through a statistical model:
+
+1. Fetches live odds (no API key needed)
+2. Removes the bookmaker margin (de-vigging)
+3. If the exact-score market is liquid and consistent: uses it directly
+4. Otherwise: fits an independent Poisson model to the moneyline and picks the most probable score
+5. Caches predictions so finished games keep their pre-game pick
 
 ---
 
 ## What you need
 
-- A **Mac** (the daily schedule uses a macOS-only feature)
-- A **Telegram** account (free, works on any phone)
+- A **Mac** (uses macOS scheduling)
+- A **Telegram** account (free, any phone)
 - A personal **Google** account for the Sheet
-- The **Terminal** app (comes with every Mac, found in Applications > Utilities)
+- The **Terminal** app (every Mac has it: Applications → Utilities)
 
-No programming experience required. Every step uses copy-paste commands.
+No packages to install — the script uses only built-in Python libraries.
 
 ---
 
 ## Setup
 
-### Step 1 - Download the code
+### 1 - Download the code
 
-Open Terminal and run these three commands one at a time:
+Open Terminal and run:
 
 ```bash
 git clone https://github.com/YG15/wc-score-bot.git
-```
-```bash
 mkdir -p ~/wc-scores
-```
-```bash
 cp wc-score-bot/daily_scores.py wc-score-bot/com.wcscores.plist ~/wc-scores/
 ```
 
-### Step 2 - Create a Telegram bot
+### 2 - Create a Telegram bot
 
-1. Open Telegram and search for **@BotFather**
-2. Send the message `/newbot`
-3. Give it any name you like (e.g. `WC Scores`)
-4. Give it a username ending in `bot` (e.g. `mywcscores_bot`) - must be unique
-5. BotFather replies with a **token** that looks like `1234567890:ABCDEFGxxx` - copy it
+1. Open Telegram, search for **@BotFather**, start a chat
+2. Send `/newbot`
+3. Choose any name (e.g. `WC Scores`) and a username ending in `bot` (e.g. `mywcscores_bot`)
+4. BotFather replies with a **token** like `1234567890:ABCDEFGxxx` — save it
 
-### Step 3 - Get your Telegram chat ID
+> Tip: you can also set a profile photo for your bot via BotFather — send `/setuserpic` after creating it.
 
-1. Search for your new bot in Telegram and press **Start**
-2. Send it any message (e.g. `hello`)
-3. Open this URL in a browser, replacing `YOUR_TOKEN` with the token from Step 2:
+### 3 - Find your Telegram chat ID
+
+1. Search for your bot and press **Start**, then send it any message
+2. Open this URL in a browser (replace `YOUR_TOKEN`):
    ```
    https://api.telegram.org/botYOUR_TOKEN/getUpdates
    ```
-4. Find the number after `"chat":{"id":` - that's your chat ID (e.g. `683221070`)
+3. Find the number after `"chat":{"id":` — that is your chat ID
 
-### Step 4 - Save your Telegram credentials
-
-In Terminal, run the two lines below. Replace `YOUR_TOKEN` and `YOUR_CHAT_ID` with the values from Steps 2-3:
+### 4 - Save your credentials
 
 ```bash
 echo "YOUR_TOKEN" > ~/wc-scores/telegram.txt
@@ -66,135 +106,114 @@ echo "YOUR_CHAT_ID" >> ~/wc-scores/telegram.txt
 chmod 600 ~/wc-scores/telegram.txt
 ```
 
-To verify it looks right (should show two lines, your token and your chat ID):
-```bash
-cat ~/wc-scores/telegram.txt
-```
+### 5 - Set up the Google Sheet
 
-### Step 5 - Set up the Google Sheet
-
-The Sheet updates automatically via a small script you paste into it. This takes about 5 minutes.
-
-**Create a new Sheet:**
-1. Make sure you are logged in to your personal Google account (not work)
-2. Go to [sheets.new](https://sheets.new) in your browser - a blank Sheet opens
+**Create a blank sheet:**
+1. Make sure you're logged into your **personal** Google account
+2. Go to [sheets.new](https://sheets.new)
 
 **Add the script:**
-1. In the Sheet, click **Extensions** in the top menu bar
-2. Click **Apps Script**
-3. A new tab opens with a code editor. Delete everything in it.
-4. Open the file `apps_script.js` from this repo and copy-paste its entire contents into the editor
-5. Click the **Save** button (floppy disk icon, or Cmd+S)
+1. Click **Extensions → Apps Script**
+2. Delete everything in the editor
+3. Copy-paste the full contents of `apps_script.js` from this repo
+4. Save with Cmd+S
 
-**Deploy the script as a web app:**
-1. Click **Deploy** in the top right > **New deployment**
-2. Click the gear icon next to "Select type" > choose **Web app**
-3. Under "Who has access", select **Anyone**
-4. Click **Deploy**
-5. A permissions screen may appear - click through to approve (this lets your Mac send data to the Sheet)
-6. Copy the **Web app URL** - it looks like `https://script.google.com/macros/s/AKfy.../exec`
+**Deploy it:**
+1. Click **Deploy → New deployment**
+2. Gear icon → **Web app**
+3. "Who has access" → **Anyone** → **Deploy**
+4. Approve any permission prompts
+5. Copy the **Web app URL** (looks like `https://script.google.com/macros/s/.../exec`)
 
-**Save the URL:**
 ```bash
-echo "PASTE_YOUR_WEB_APP_URL_HERE" > ~/wc-scores/sheet_webhook.txt
+echo "YOUR_WEB_APP_URL" > ~/wc-scores/sheet_webhook.txt
 chmod 600 ~/wc-scores/sheet_webhook.txt
 ```
 
-### Step 6 - Set up the daily schedule
-
-This tells your Mac to run the script every day at noon. Run these two commands:
+### 6 - Schedule the daily job
 
 ```bash
 sed "s/YOUR_USERNAME/$(whoami)/g" ~/wc-scores/com.wcscores.plist \
   > ~/Library/LaunchAgents/com.wcscores.plist
-```
-```bash
+
 launchctl load -w ~/Library/LaunchAgents/com.wcscores.plist
 ```
 
-Confirm it's loaded (you should see `com.wcscores` in the output):
+Confirm it loaded:
 ```bash
 launchctl list | grep wcscores
 ```
 
-### Step 7 - Test it
+### 7 - Test it
 
-First, do a dry run that prints output but doesn't send anything:
 ```bash
+# Dry run - prints output, sends nothing:
 /usr/bin/python3 ~/wc-scores/daily_scores.py --print
-```
 
-If the output looks good (you see game names and predicted scores), do a real run:
-```bash
+# Real run - posts to Telegram and updates the Sheet:
 /usr/bin/python3 ~/wc-scores/daily_scores.py
 ```
 
-Check your Telegram - you should have received a message. The Google Sheet should also have updated (look for it in your Google Drive recents, it will be named "World Cup 2026 - Most-Probable Scores").
+Check your Telegram. The Sheet will appear in your Google Drive recents as **"World Cup 2026 - Most-Probable Scores"**.
 
 ---
 
-## Managing the bot
+## Quick reference
 
-**Run it right now** (without waiting for noon):
-```bash
-launchctl kickstart -k gui/$(id -u)/com.wcscores
-```
+| Task | Command |
+|------|---------|
+| Run now (skip the wait) | `launchctl kickstart -k gui/$(id -u)/com.wcscores` |
+| View logs | `tail -50 ~/wc-scores/launchd.log` |
+| Stop permanently | `launchctl unload ~/Library/LaunchAgents/com.wcscores.plist` |
 
-**View logs** (useful if something seems broken):
-```bash
-tail -50 ~/wc-scores/launchd.log
-```
+**Change the run time** (e.g. 9am instead of noon): open `~/Library/LaunchAgents/com.wcscores.plist` in any text editor, change the `12` under `Hour` to `9`, then reload:
 
-**Change the run time** (e.g. to 9am):  
-Open `~/Library/LaunchAgents/com.wcscores.plist` in a text editor, change the `12` under `Hour` to `9`, then reload:
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.wcscores.plist
 launchctl load -w ~/Library/LaunchAgents/com.wcscores.plist
 ```
 
-**Stop it permanently:**
-```bash
-launchctl unload ~/Library/LaunchAgents/com.wcscores.plist
-rm ~/Library/LaunchAgents/com.wcscores.plist
-```
+---
+
+## Notes
+
+- The bot **auto-stops after 20 July 2026** (day after the final). No action needed.
+- Your Mac must be **awake at noon** for the scheduled job to fire. If it was sleeping, run it manually.
+- An internet connection is required each run.
 
 ---
 
-## Important notes
-
-- **Your Mac must be awake at noon** for the job to fire. If it was sleeping, run it manually with the kickstart command above.
-- **Internet is required** at run time to fetch live odds from Polymarket.
-- The bot **automatically stops after 20 July 2026** (day after the WC final). You don't need to clean anything up.
-- Predictions are based on market odds, not inside information. Use for fun, not gambling.
-
----
-
-## Files in this repo
+## Files
 
 | File | What it is |
 |------|-----------|
-| `daily_scores.py` | The main script. Uses only Python's built-in libraries - no installs needed. |
-| `apps_script.js` | The code you paste into your Google Sheet's Apps Script editor. |
-| `com.wcscores.plist` | Template for the macOS daily scheduler. |
-| `telegram.txt.example` | Shows the expected format for your credentials file (do not edit - create your own `telegram.txt`). |
-| `sheet_webhook.txt.example` | Shows the expected format for the webhook URL file. |
+| `daily_scores.py` | The main script. Stdlib-only, no installs needed. |
+| `apps_script.js` | Paste this into your Google Sheet's Apps Script editor. |
+| `com.wcscores.plist` | macOS scheduler template (fires at noon daily). |
+| `telegram.txt.example` | Format reference — create your own `telegram.txt` with real values. |
+| `sheet_webhook.txt.example` | Format reference for the webhook URL. |
 
 ---
 
-## Troubleshooting
+<details>
+<summary><b>Troubleshooting</b></summary>
 
-**No Telegram message received:**
-- Run `tail -20 ~/wc-scores/launchd.log` and look for error messages
-- Check your `telegram.txt` has exactly two lines (token on line 1, chat ID on line 2)
-- Make sure you sent a message to the bot first (bots can't message you until you start them)
+<br>
 
-**Sheet is not updating:**
-- Check that your `sheet_webhook.txt` contains the exact URL from the Apps Script deployment
-- Make sure the Apps Script was deployed from *inside* the Sheet (Extensions > Apps Script), not as a standalone script
+**No Telegram message received**
+- Check logs: `tail -20 ~/wc-scores/launchd.log`
+- Confirm `telegram.txt` has exactly two lines: token on line 1, chat ID on line 2
+- You must send the bot a message first before it can message you
 
-**`command not found: git`:**
-- Install Xcode Command Line Tools: run `xcode-select --install` in Terminal
+**Sheet is not updating**
+- Confirm `sheet_webhook.txt` has the exact URL from the Apps Script deployment
+- The Apps Script must be bound to the Sheet (created via Extensions → Apps Script inside the Sheet, not as a standalone script)
 
-**The launchctl command fails:**
-- Check the plist installed correctly: `cat ~/Library/LaunchAgents/com.wcscores.plist`
-- Make sure `YOUR_USERNAME` was replaced - it should show your actual Mac username
+**`command not found: git`**
+- Run `xcode-select --install` in Terminal to get Git
+
+**launchctl load fails / `YOUR_USERNAME` not replaced**
+- Check: `cat ~/Library/LaunchAgents/com.wcscores.plist` — should show your actual Mac username, not `YOUR_USERNAME`
+- Re-run the `sed` command from Step 6
+
+</details>
