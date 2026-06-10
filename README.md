@@ -1,6 +1,7 @@
 <div align="center">
-  <img src="banner.svg" alt="WC 2026 Score Bot" width="100%">
-  <br><br>
+  <img src="logo.png" alt="WC 2026 Score Bot" width="220">
+
+  # WC 2026 Score Bot
 
   ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)
   ![Platform](https://img.shields.io/badge/macOS-only-lightgrey?style=flat-square&logo=apple)
