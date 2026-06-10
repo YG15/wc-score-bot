@@ -18,23 +18,15 @@
 
 **A Telegram message every day at noon** with today's and tomorrow's games:
 
-```
-World Cup - next 24h (2026-06-14 / 2026-06-15)
-model = Poisson on moneyline; market = Polymarket exact-score
+<div align="center">
+  <img src="screenshots/telegram.jpg" alt="Telegram bot message preview" width="55%">
+</div>
 
-[2026-06-14] 🇺🇸 United States vs 🇵🇾 Paraguay:   model 1-0 | market 1-0
-[2026-06-14] 🇧🇷 Brazil vs 🇲🇦 Morocco:             model 1-0 | market 1-0
-[2026-06-15] 🇦🇷 Argentina vs 🇩🇿 Algeria:           model 2-0 | market 2-0
-[2026-06-15] 🇫🇷 France vs 🇸🇳 Senegal:              model 2-0
-```
+**A Google Sheet with all 72 games**, updated daily with predictions and actual results as they come in:
 
-**A Google Sheet with all 72 games**, updated daily with predictions and actual results:
-
-| Date | Home | Away | Model | Market | xG | Actual |
-|------|------|------|-------|--------|----|--------|
-| 2026-06-11 | 🇲🇽 Mexico | 🇿🇦 South Africa | 1:0 (16%) | 1:0 (15%) | 1.89:0.57 | **2:0** |
-| 2026-06-14 | 🇺🇸 United States | 🇵🇾 Paraguay | 1:0 (16%) | 1:0 (15%) | 1.67:0.52 | |
-| 2026-06-14 | 🇧🇷 Brazil | 🇲🇦 Morocco | 1:0 (18%) | 1:0 (17%) | 1.89:0.71 | |
+<div align="center">
+  <img src="screenshots/sheet.png" alt="Google Sheet preview" width="100%">
+</div>
 
 Plus a second tab with **World Cup winner and Golden Boot odds** from the markets.
 
