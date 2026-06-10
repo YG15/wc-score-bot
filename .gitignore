@@ -1,0 +1,7 @@
+telegram.txt
+sheet_webhook.txt
+predictions.json
+launchd.log
+forecast_seed.csv
+*.csv
+__pycache__/
