@@ -194,6 +194,52 @@ def moneyline_from_event(event, home, away):
     return {k: v / s for k, v in raw.items()}
 
 
+# ---------- ESPN actual-score fallback ----------
+
+# Team names that differ between our data (Polymarket) and ESPN
+_ESPN_NAME = {
+    "Korea Republic": "South Korea",
+    "Côte d'Ivoire":  "Ivory Coast",
+    "Cabo Verde":     "Cape Verde",
+    "IR Iran":        "Iran",
+    "DR Congo":       "Congo DR",
+}
+
+def espn_result(slug, home, away):
+    """Return actual score 'H:A' from ESPN for a finished game, or None.
+    Uses the date embedded in the slug (YYYY-MM-DD suffix) to avoid UTC off-by-one."""
+    m = re.search(r"(\d{4}-\d{2}-\d{2})$", slug)
+    if not m:
+        return None
+    date_compact = m.group(1).replace("-", "")
+    try:
+        d = get_json("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
+                     "?dates=" + date_compact)
+    except Exception:
+        return None
+
+    def norm(n):
+        return re.sub(r"[^a-z0-9]", "", n.lower())
+
+    hn = norm(_ESPN_NAME.get(home, home))
+    an = norm(_ESPN_NAME.get(away, away))
+
+    for event in d.get("events", []):
+        comps = event.get("competitions", [{}])[0]
+        competitors = comps.get("competitors", [])
+        ht = next((t for t in competitors if t.get("homeAway") == "home"), None)
+        at = next((t for t in competitors if t.get("homeAway") == "away"), None)
+        if not ht or not at:
+            continue
+        ehn = norm(ht.get("team", {}).get("displayName", ""))
+        ean = norm(at.get("team", {}).get("displayName", ""))
+        if ehn == hn and ean == an:
+            hs, as_ = ht.get("score", ""), at.get("score", "")
+            if hs != "" and as_ != "":
+                return "%s:%s" % (hs, as_)
+    return None
+
+
 # ---------- Polymarket exact-score market ----------
 
 def exact_score_event(slug):
@@ -241,7 +287,7 @@ def analyze_game(event, now_iso):
             (h, a), _ = max(resolved, key=lambda t: t[1])
             actual = "%d:%d" % (h, a)
         elif any_other and any_other[0] is not None and any_other[0] >= 0.99:
-            actual = ">3 (other)"
+            actual = espn_result(slug, home, away) or ">3 (other)"
         # Live MARKET score - only if the book is real. Two guards:
         #  - junk: an untraded/early book quotes many cells at implausible mids (several near ~0.45);
         #    a real exact-score probability is never that high. 2+ cells over 0.30 => stale, skip.
@@ -296,8 +342,9 @@ def save_cache(cache):
 
 def gather(now_iso, cache):
     events = get_json("https://gamma-api.polymarket.com/events?" + urllib.parse.urlencode(
-        {"tag_id": WC_TAG_ID, "limit": 500, "active": "true", "closed": "false"}))
-    games = [e for e in events if e.get("slug", "").startswith("fifwc-")]
+        {"tag_id": WC_TAG_ID, "limit": 500}))
+    # Strict slug match: fifwc-{team}-{team}-2026-MM-DD — excludes halftime/exact-score sub-markets
+    games = [e for e in events if re.match(r"fifwc-.+-2026-\d{2}-\d{2}$", e.get("slug", ""))]
     games.sort(key=lambda e: e.get("endDate", ""))
 
     rows = []
@@ -322,22 +369,49 @@ def gather(now_iso, cache):
     return rows
 
 
+def prediction_points(actual, predicted):
+    """0 = wrong direction, 1 = right direction wrong score, 3 = exact score."""
+    if not actual or not predicted:
+        return None
+    am = re.match(r"(\d+):(\d+)", actual)
+    pm = re.match(r"(\d+):(\d+)", predicted)
+    if not am or not pm:
+        return None
+    ah, aa = int(am.group(1)), int(am.group(2))
+    ph, pa = int(pm.group(1)), int(pm.group(2))
+    if ah == ph and aa == pa:
+        return 3
+    def direction(h, a):
+        return "H" if h > a else ("A" if a > h else "D")
+    return 1 if direction(ah, aa) == direction(ph, pa) else 0
+
+
 def sheet_values(rows, today):
     title = "%s   (updated %s; source: Polymarket)" % (SHEET_TITLE, today)
     header = ["Match Date", "", "Home", "", "Away",
               "Model Score", "Model %", "Market Score", "Market %", "xG H:A",
-              "Actual Score", "Status", "Updated"]
+              "Actual Score", "Status", "Updated", "Points"]
     width = len(header)
     out = [[title] + [""] * (width - 1), header]
+    total_pts = max_pts = 0
     for r in rows:
         mdl_p = ("%.0f%%" % r["model_prob"]) if r["model_prob"] is not None else ""
         mkt_p = ("%.0f%%" % r["market_prob"]) if r["market_prob"] is not None else ""
         xg = ("%.2f:%.2f" % (r["xg"][0], r["xg"][1])) if r["xg"] else ""
+        best_pred = r["market_score"] or r["model_score"]
+        pts = prediction_points(r["actual"], best_pred)
+        if pts is not None:
+            total_pts += pts
+            max_pts += 3
         out.append([r["date"], flag_formula(r["home"]), r["home"],
                     flag_formula(r["away"]), r["away"],
                     r["model_score"] or "", mdl_p,
                     r["market_score"] or "", mkt_p, xg,
-                    r["actual"] or "", r["status"], today])
+                    r["actual"] or "", r["status"], today,
+                    pts if pts is not None else ""])
+    # totals row
+    out.append([""] * (width - 3) + ["TOTAL", "",
+                "%d / %d pts" % (total_pts, max_pts)])
     return out
 
 

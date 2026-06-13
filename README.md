@@ -29,6 +29,16 @@
   <img src="screenshots/sheet.png" alt="Google Sheet preview" width="100%">
 </div>
 
+The sheet includes a **Points column** that scores each prediction once the game is final:
+
+| Points | Color | Meaning |
+|--------|-------|---------|
+| 3 | 🟩 green | Exact score correct |
+| 1 | 🟨 yellow | Right winner/draw, wrong score |
+| 0 | 🟥 red | Wrong direction entirely |
+
+A **totals row** at the bottom tracks overall performance (e.g. `14 / 48 pts`).
+
 Plus a second tab with **World Cup winner and Golden Boot odds** from the markets.
 
 ---
@@ -47,6 +57,7 @@ Predictions come from [Polymarket](https://polymarket.com) — the world's large
 3. If the exact-score market is liquid and consistent: uses it directly
 4. Otherwise: fits an independent Poisson model to the moneyline and picks the most probable score
 5. Caches predictions so finished games keep their pre-game pick
+6. Once a game ends, pulls the actual scoreline from Polymarket's resolved markets — falling back to ESPN for high-scoring results outside Polymarket's tracked range
 
 ---
 
