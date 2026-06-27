@@ -340,9 +340,30 @@ def save_cache(cache):
 
 # ---------- build outputs ----------
 
+def fetch_wc_events():
+    """All events under the World Cup tag. The gamma API silently caps each
+    response at 100 rows (it ignores a larger ?limit=), and the tag now holds
+    ~900 events because every game spawns several sub-markets (exact-score,
+    halftime, corners, player-props...). So we MUST page with ?offset= until a
+    short page comes back - otherwise later-created games (e.g. the knockout
+    round, and any group game added late) never get seen."""
+    events, offset = [], 0
+    while True:
+        page = get_json("https://gamma-api.polymarket.com/events?" + urllib.parse.urlencode(
+            {"tag_id": WC_TAG_ID, "limit": 100, "offset": offset}))
+        if not page:
+            break
+        events.extend(page)
+        if len(page) < 100:      # last page reached
+            break
+        offset += 100
+        if offset > 5000:        # safety stop; we never expect this many
+            break
+    return events
+
+
 def gather(now_iso, cache):
-    events = get_json("https://gamma-api.polymarket.com/events?" + urllib.parse.urlencode(
-        {"tag_id": WC_TAG_ID, "limit": 500}))
+    events = fetch_wc_events()
     # Strict slug match: fifwc-{team}-{team}-2026-MM-DD — excludes halftime/exact-score sub-markets
     games = [e for e in events if re.match(r"fifwc-.+-2026-\d{2}-\d{2}$", e.get("slug", ""))]
     games.sort(key=lambda e: e.get("endDate", ""))
