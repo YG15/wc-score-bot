@@ -21,7 +21,7 @@ goes to ~1.0; that cell's score is the actual result. A >3-goal result resolves 
 
 Testing:  python3 daily_scores.py --print [YYYY-MM-DD]
 """
-import sys, os, json, math, datetime, urllib.request, urllib.parse, re
+import sys, os, json, math, time, datetime, urllib.request, urllib.parse, re
 
 UA = {"User-Agent": "Mozilla/5.0"}
 TELEGRAM_FILE = os.path.expanduser("~/wc-scores/telegram.txt")           # line1 token, line2 chat id
@@ -76,9 +76,20 @@ def labeled(team):
     return (f + " " + team) if f else team
 
 
-def get_json(url):
-    req = urllib.request.Request(url, headers=UA)
-    return json.load(urllib.request.urlopen(req, timeout=30))
+def get_json(url, retries=4):
+    """GET + parse JSON, retrying transient network failures with backoff.
+    Each run now makes ~10 paginated requests, so a single dropped connection
+    (Polymarket resets peers under load) must not abort the whole job. We retry
+    a few times and only raise if every attempt fails - never return partial."""
+    last = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            return json.load(urllib.request.urlopen(req, timeout=30))
+        except Exception as ex:
+            last = ex
+            time.sleep(1.5 * (attempt + 1))  # 1.5s, 3s, 4.5s between tries
+    raise last
 
 
 def teams(title):
