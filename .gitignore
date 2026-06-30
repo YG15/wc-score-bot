@@ -1,6 +1,8 @@
 telegram.txt
 sheet_webhook.txt
 predictions.json
+game_slugs.json
+meta_cache.json
 launchd.log
 forecast_seed.csv
 *.csv

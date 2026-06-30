@@ -19,7 +19,13 @@ function doPost(e) {
     var sheet = ss.getSheetByName(p.name) || ss.insertSheet(p.name);
     sheet.clear();
     if (p.values && p.values.length) {
-      sheet.getRange(1, 1, p.values.length, p.values[0].length).setValues(p.values);
+      var rng = sheet.getRange(1, 1, p.values.length, p.values[0].length);
+      // Reset number format to General before writing. The Goals column reuses a
+      // cell that previously held "Implied %" values, and clear() can leave the old
+      // percent format behind - which made integer goal counts (e.g. 6) show as 600%.
+      // Setting General first wipes that; "28.1%" strings still auto-format as percent.
+      rng.setNumberFormat("General");
+      rng.setValues(p.values);
       sheet.setFrozenRows(p.frozen || 1);
     }
 
@@ -35,10 +41,11 @@ function doPost(e) {
           var colors = [];
           for (var i = 2; i < p.values.length - 1; i++) {
             var pts = p.values[i][pointsCol - 1];
-            if (pts === 0)      colors.push(["#F4CCCC"]); // red
-            else if (pts === 1) colors.push(["#FFF2CC"]); // yellow
-            else if (pts === 3) colors.push(["#D9EAD3"]); // green
-            else                colors.push([null]);       // unplayed - no color
+            // Group stage scores 3/1/0; knockout (R32+) scores 5/2/0.
+            if (pts === 0)                  colors.push(["#F4CCCC"]); // red   - wrong
+            else if (pts === 1 || pts === 2) colors.push(["#FFF2CC"]); // yellow - right direction
+            else if (pts === 3 || pts === 5) colors.push(["#D9EAD3"]); // green  - exact score
+            else                            colors.push([null]);       // unplayed - no color
           }
           sheet.getRange(3, pointsCol, colors.length, 1).setBackgrounds(colors);
         }
