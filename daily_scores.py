@@ -434,7 +434,12 @@ def _save_slug_cache(slugs):
 
 
 def fetch_wc_events():
-    """All events under the World Cup tag, in two passes:
+    """All events under the World Cup tag, in three passes:
+
+    Pass 0 - newest first: one request ordered by startDate descending. New
+    knockout games are created last, so this surfaces them immediately without
+    waiting for pagination to reach a high offset - the fast path that makes a
+    freshly-listed fixture appear the same day Polymarket adds it.
 
     Pass 1 - pagination: tag_id scan with limit=50 (gzip keeps each page ~200 KB;
     100 caused IncompleteRead). Skips failed pages rather than aborting so
@@ -442,12 +447,25 @@ def fetch_wc_events():
     to game_slugs.json.
 
     Pass 2 - slug cache: for any slug in game_slugs.json NOT already returned by
-    pass 1, fetch the event directly by slug (always small, always reliable). This
-    ensures that once a knockout game is discovered it stays in the output even on
-    days when the paginator cannot reach it."""
+    earlier passes, fetch the event directly by slug (always small, always
+    reliable). This keeps a once-discovered game in the output even on days when
+    the paginator cannot reach it."""
     seen = set()
     events = []
     t0 = time.monotonic()
+
+    # --- pass 0: newest games first (single reliable request) ---
+    try:
+        newest = get_json("https://gamma-api.polymarket.com/events?" + urllib.parse.urlencode(
+            {"tag_id": WC_TAG_ID, "limit": 100, "order": "startDate", "ascending": "false"}),
+            retries=4, timeout=15)
+        for e in newest or []:
+            slug = e.get("slug", "")
+            if slug and slug not in seen:
+                seen.add(slug)
+                events.append(e)
+    except Exception:
+        pass  # pagination + slug cache still cover it
 
     # --- pass 1: paginate (max 30 seconds) ---
     offset, consecutive_failures, total_failures = 0, 0, 0
